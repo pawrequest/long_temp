@@ -26,7 +26,8 @@ class RemoveResult:
 @dataclass
 class FileOps:
     itinery: Itinery
-    # changes_made:bool = False
+    remove_result: RemoveResult = field(default_factory=RemoveResult)
+
 
     def do_copy(self):
         cop_res = {}
@@ -41,6 +42,7 @@ class FileOps:
         rem_res = self.remove_files(rem_res)
         rem_res = self.remove_dirs(rem_res)
         logger.info(rem_res.log_str)
+        self.remove_result = rem_res
         return rem_res
 
     def remove_files(self, rem_res: RemoveResult = None) -> RemoveResult:
@@ -96,35 +98,3 @@ def remove_empty_dirs(tgt, rem_res: RemoveResult | None = None) -> RemoveResult:
 
     return rem_res
 
-##### LEGACY #####
-
-# def _remove_empty_dirs1(target: Path, rem_res:RemoveResult | None = None) -> tuple[set[str], set[str]]:
-#     rem_res = rem_res or RemoveResult()
-#     empty = set()
-#     r_set = set()
-#     for root, dirnames, filenames in os.walk(target, topdown=False):
-#         r_set.add(root)
-#         for dir_ in dirnames:
-#             _remove_empty_dirs1(dir_)
-#         else:
-#             rem_res.dirs_removed.add(root)
-#             shutil.rmtree(root)
-#     return rem_res
-
-
-#
-# def dir_empty(dir_path):
-#     try:
-#         next(os.scandir(dir_path))
-#         return False
-#     except StopIteration:
-#         return True
-#
-#
-# def dir_tree_empty(tree_root):
-#     for dirpath, dirnames, filenames in os.walk(tree_root):
-#         if filenames:
-#             return False
-#         if dirnames:
-#             return all([dir_empty(Path(dirpath) / dir_) for dir_ in dirnames])
-#     return True
