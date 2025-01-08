@@ -1,5 +1,4 @@
 import dataclasses
-import shutil
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -41,6 +40,7 @@ class Manifest:
 class Itinery:
     target: Path
     manifests: frozenset[Manifest] = field(default_factory=frozenset)
+    changes_made:bool = False
 
     def __eq__(self, other):
         return self.manifests == other.manifests
@@ -65,8 +65,8 @@ class Itinery:
         msg = f": \n\t{'\n\t'.join(str(_) for _ in itins)}"
         return msg
 
-    def __bool__(self):
-        return bool(self.manifests)
+    # def __bool__(self):
+    #     return bool(self.manifests)
 
     @classmethod
     def merge2(cls, itin1: Self | None, itin2: Self | None) -> Self:
@@ -89,7 +89,7 @@ class Itinery:
 
     @property
     def all_paths_relative(self) -> frozenset[Path]:
-        return frozenset.union(*[_.paths_relative for _ in self.manifests])
+        return frozenset.union(*[_.paths_relative for _ in self.manifests]) if self.manifests else frozenset()
 
     def add_manifest(self, manifest: Manifest):
         if manifest in self.manifests:
@@ -106,7 +106,12 @@ class Itinery:
 
     def remove_source(self, source: Path):
         self.manifests = frozenset([_ for _ in self.manifests if _.source != source])
+
         return self
+
+    def is_empty(self):
+        return len(self.manifests) == 0
+
 
     # def copy_files(self):
     #     logger.info(f"Copying {self.num_files_meth()} paths to {self.target}")

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from long_temporary.v2.itinery import Itinery, Manifest, get_itinery
+from longtemp.itinery import Itinery, Manifest, get_itinery
 
 
 @dataclass

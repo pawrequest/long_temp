@@ -5,7 +5,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from long_temporary.v2.itinery import Itinery
+from longtemp.itinery import Itinery
 
 
 @dataclass
@@ -26,6 +26,7 @@ class RemoveResult:
 @dataclass
 class FileOps:
     itinery: Itinery
+    # changes_made:bool = False
 
     def do_copy(self):
         cop_res = {}
