@@ -10,6 +10,8 @@ from loguru import logger
 
 @dataclass
 class Manifest:
+    """Record of a source directory and its files relative to the source"""
+
     source: Path
     paths_relative: frozenset[Path] = field(default_factory=frozenset)
     creation_date: str = field(default_factory=datetime.now().isoformat)
@@ -38,9 +40,11 @@ class Manifest:
 
 @dataclass
 class Itinery:
+    """Record of a target directory and it's Manifests"""
+
     target: Path
     manifests: frozenset[Manifest] = field(default_factory=frozenset)
-    changes_made:bool = False
+    changes_made: bool = False
 
     def __eq__(self, other):
         return self.manifests == other.manifests
@@ -111,61 +115,6 @@ class Itinery:
 
     def is_empty(self):
         return len(self.manifests) == 0
-
-
-    # def copy_files(self):
-    #     logger.info(f"Copying {self.num_files_meth()} paths to {self.target}")
-    #     for manifest in self.manifests:
-    #         for path_ in manifest.paths_relative:
-    #             try:
-    #                 src_path = manifest.source / path_
-    #                 dst_path = self.target / path_
-    #                 if src_path.is_dir():
-    #                     dst_path.mkdir(parents=True, exist_ok=True)
-    #                 elif src_path.is_file():
-    #                     if not dst_path.parent.exists():
-    #                         dst_path.parent.mkdir(parents=True, exist_ok=True)
-    #                     shutil.copy2(src_path, dst_path)
-    #                     # logger.info(f"Copied file: {src_path} to {dst_path}")
-    #             except Exception as e:
-    #                 logger.error(f"Error copying {path_}: {e}")
-    #                 raise
-
-    # def remove_files(self, rem_res:RemoveResult = None) -> RemoveResult:
-    #     rem_res = RemoveResult()
-    #
-    #     for tgt_path in self.all_paths_relative:
-    #         dst_path = self.target / tgt_path
-    #         if not dst_path.exists():
-    #             rem_res.missing_ignored.add(str(dst_path))
-    #
-    #         elif dst_path.is_file():
-    #             rem_res.files.add(str(dst_path))
-    #             dst_path.unlink()
-    #
-    #     empty, not_empty = remove_empty_dirs(self.target)
-    #     rem_res.dirs_removed.update(empty)
-    #     rem_res.dirs_ignored.update(not_empty)
-    #
-    #     return rem_res
-
-    # def remove_empty_dirs(
-    #     self,
-    #
-    # ) -> tuple[set[str], set[str]]:
-    #     empty = set()
-    #     n_set = set()
-    #     r_set = set()
-    #     for root, dirnames, filenames in os.walk(self.target, topdown=False):
-    #         r_set.add(root)
-    #         for dir_ in dirnames if dirnames else []:
-    #             self.remove_empty_dirs(dir_)
-    #         else:
-    #             empty.add(root)
-    #             # os.rmdir(root)
-    #             shutil.rmtree(root)
-    #     res = empty, r_set - empty
-    #     return res
 
 
 def get_itinery(tgt: Itinery | Path, itineries: Iterable[Itinery]):
