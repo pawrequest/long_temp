@@ -121,7 +121,7 @@ class Itinery:
                     logger.error(f"Error copying {path_}: {e}")
                     raise
 
-    def remove_files(self):
+    def remove_files(self, rem_res:RemoveResult = None) -> RemoveResult:
         rem_res = RemoveResult()
 
         for tgt_path in self.all_paths_relative:
@@ -137,7 +137,6 @@ class Itinery:
         rem_res.dirs.update(empty)
         rem_res.not_empty.update(not_empty)
 
-        logger.info(rem_res.log_str2)
         return rem_res
 
     # def remove_empty_dirs(
@@ -260,7 +259,7 @@ class RemoveResult:
     not_empty: set[str] = field(default_factory=set)
 
     @property
-    def log_str2(self):
+    def log_str(self):
         return (
             f"Removed {len(self.files)} files and {len(self.dirs)} empty directories, "
             f"Ignored {len(self.missing)} Path/s (not found) and {len(self.not_empty)} Directories (not empty)"

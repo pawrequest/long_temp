@@ -19,16 +19,15 @@ COPY_MODE: CopyModeType = "delete"
 
 SOURCE_PATH: Path | None = None
 SOURCE_PATH: Path | None = Path(TEST1)
-MANIFEST_FILE: Path = Path("file_references.json")
+MANIFEST_FILE: Path = Path("../file_references.json")
 TARGET_PATH = Path(TEST3)
 
 
 def main():
     _changed: bool = False
     itin_file = ItineriesFile(MANIFEST_FILE)
-    scanned = scanin()
-    # loaded: Itinery | None = itin_file.get_itinery(TARGET_PATH)
     itinery: Itinery | None = itin_file.get_itinery(TARGET_PATH)
+    scanned = scanin()
 
     if scanned:
         if not itinery or list(scanned.manifests)[0] not in itinery.manifests:
@@ -52,8 +51,9 @@ def main():
     elif COPY_MODE in ["remove_manifest", "delete"]:
         _changed = bool(itin_file.pop_itin(itinery.target))
         if COPY_MODE == "delete":
-            itinery.remove_files()
-            # itinery.remove_empty_dirs()
+            rem_result = itinery.remove_files()
+            logger.info(rem_result.log_str)
+
 
     if _changed:
         itin_file.save_json()
