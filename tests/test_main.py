@@ -1,6 +1,6 @@
 import pytest
 
-from longtemp.main import main
+from longtemp.v1.main import main
 from longtemp.intinery_file import ItineriesFile
 
 

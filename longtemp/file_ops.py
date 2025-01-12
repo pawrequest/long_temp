@@ -1,100 +1,94 @@
 import os
 import shutil
-from dataclasses import dataclass, field
+from dataclasses import field
+from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 from loguru import logger
+from pydantic import BaseModel
 
-from longtemp.itinery import Itinery
-
-
-@dataclass
-class RemoveResult:
-    files_removed: set[str] = field(default_factory=set)
-    dirs_removed: set[str] = field(default_factory=set)
-    missing_ignored: set[str] = field(default_factory=set)
-    dirs_ignored: set[str] = field(default_factory=set)
-
-    @property
-    def log_str(self):
-        return (
-            f"Removed {len(self.files_removed)} files and {len(self.dirs_removed)} empty directories, "
-            f"Ignored {len(self.missing_ignored)} Path/s (not found) and {len(self.dirs_ignored)} Directories (not empty)"
-        )
+OpType = Literal["copy", "delete", "replace", "prune_empty_folders"]
 
 
-@dataclass
-class FileOps:
-    itinery: Itinery
-    remove_result: RemoveResult = field(default_factory=RemoveResult)
+class FileopResult(BaseModel):
+    file_op: OpType
+    root: Path | None = None
+    paths_processed: set[Path] = field(default_factory=set)
+    files_copied: set[Path] = field(default_factory=set)
+    files_deleted: set[Path] = field(default_factory=set)
+    folders_created: set[Path] = field(default_factory=set)
+    folders_deleted: set[Path] = field(default_factory=set)
+    paths_failed: set[Path] = field(default_factory=set)
+    paths_skipped: set[Path] = field(default_factory=set)
+    created_at: datetime = field(default_factory=datetime.now)
 
 
-    def do_copy(self):
-        cop_res = {}
-        for manifest in self.itinery.manifests:
-            copied = copy_files(self.itinery.all_paths_relative, manifest.source, self.itinery.target)
-            cop_res[manifest.source] = copied
-        logger.info(f"Copied {len(cop_res)} Manifests")
-        logger.debug(cop_res)
-
-    def do_remove(self) -> RemoveResult:
-        rem_res = RemoveResult()
-        rem_res = self.remove_files(rem_res)
-        rem_res = self.remove_dirs(rem_res)
-        logger.info(rem_res.log_str)
-        self.remove_result = rem_res
-        return rem_res
-
-    def remove_files(self, rem_res: RemoveResult = None) -> RemoveResult:
-        return remove_files(self.itinery.all_paths_relative, self.itinery.target, rem_res)
-
-    def remove_dirs(self, rem_res: RemoveResult = None) -> RemoveResult:
-        return remove_empty_dirs(self.itinery.target, rem_res)
-
-
-def copy_files(pathlist: frozenset[Path], source: Path, target: Path) -> set[Path]:
-    copied = set()
-    for path_ in pathlist:
+def copy_overwrite_shutil(
+    rel_paths: set[Path], root: Path, target: Path, result: FileopResult = None, ignore_error=False
+) -> FileopResult:
+    result = result or FileopResult(file_op="copy", root=root)
+    for rel_path in rel_paths:
         try:
-            src_path = source / path_
-            dst_path = target / path_
+            src_path = root / rel_path
+            dst_path = target / rel_path
+            result.paths_processed.add(rel_path)
             if src_path.is_dir():
                 dst_path.mkdir(parents=True, exist_ok=True)
+                logger.debug(f"Making folder: {dst_path}", category="Copying")
+                result.folders_created.add(dst_path)
             elif src_path.is_file():
-                if not dst_path.parent.exists():
-                    dst_path.parent.mkdir(parents=True, exist_ok=True)
-                copied.add(shutil.copy2(src_path, dst_path))
+                # if not dst_path.parent.exists():
+                dst_path.parent.mkdir(parents=True, exist_ok=True)
+                result.files_copied.add(shutil.copy2(src_path, dst_path))
+                logger.debug(f"Copying file: {dst_path}", category="Copying")
+        except OSError as e:
+            logger.error(f"Error copying {rel_path}: {e}")
+            result.paths_failed.add(root / rel_path)
+            if not ignore_error:
+                raise e
+    return result
+
+
+def remove_files(rel_paths: set, root: Path, result: FileopResult = None, ignore_error=False) -> FileopResult:
+    result = result or FileopResult(file_op="delete", root=root)
+    for rel_path in rel_paths:
+        result.paths_processed.add(rel_path.resolve())
+        try:
+            dst_path = root.resolve() / rel_path
+            logger.debug(f"Removing file: {dst_path}", category="Removing")
+            if dst_path.is_file():
+                dst_path.unlink()
+                result.files_deleted.add(dst_path)  #
         except Exception as e:
-            logger.error(f"Error copying {path_}: {e}")
-            raise
-    return copied
+            logger.error(f"Error removing {root / rel_path}")
+            result.paths_failed.add(root / rel_path)
+            if not ignore_error:
+                raise e
+    return result
 
 
-def remove_files(pathset: frozenset, tgt: Path, rem_res: RemoveResult = None) -> RemoveResult:
-    rem_res = rem_res or RemoveResult()
+def delete_empty_folders(root, result: FileopResult | None = None) -> FileopResult:
+    result = result or FileopResult(file_op="prune_empty_folders", root=root)
 
-    for tgt_path in pathset:
-        dst_path = tgt / tgt_path
-        if not dst_path.exists():
-            rem_res.missing_ignored.add(str(dst_path))
+    for current_dir, subdirs, files in os.walk(root, topdown=False):
+        still_has_subdirs = False
+        for subdir in subdirs:
+            if os.path.join(current_dir, subdir) not in result.folders_deleted:
+                still_has_subdirs = True
+                break
 
-        elif dst_path.is_file():
-            rem_res.files_removed.add(str(dst_path))
-            dst_path.unlink()
+        if not any(files) and not still_has_subdirs:
+            logger.debug(f"Removing empty folder: {current_dir}", category="Removing")
+            os.rmdir(current_dir)
+            result.folders_deleted.add(current_dir)
+        else:
+            result.paths_skipped.add(current_dir)
 
-    return rem_res
+    return result
 
 
-def remove_empty_dirs(tgt, rem_res: RemoveResult | None = None) -> RemoveResult:
-    rem_res = rem_res or RemoveResult()
-    for root, dirnames, filenames in os.walk(tgt, topdown=False):
-        for dir_ in dirnames:
-            remove_empty_dirs(dir_)
-            if not filenames:
-                rem_res.dirs_removed.update(root)
-                shutil.rmtree(root)
-            else:
-                rem_res.dirs_ignored.update(root)
-
-    return rem_res
-
+class FileOp(BaseModel):
+    result: FileopResult
+    tgt: Path
+    op_type: OpType
