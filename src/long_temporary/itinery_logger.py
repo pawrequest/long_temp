@@ -46,7 +46,7 @@ class FileTracker(BaseModel):
             json.dump(data, f)
             logger.info(f"OverWrote: {self.itineries_json}", category="Logging")
 
-    def update_itin(self, itin: Itinery):
+    def add_update_itin(self, itin: Itinery):
         if self.itineries.get(itin.name):
             logger.info(f"Merging Itineries ({itin.name})", category="Logging")
             for manifest in itin.manifests.values():
@@ -57,7 +57,7 @@ class FileTracker(BaseModel):
         self.itineries = {k: v for k, v in sorted(self.itineries.items(), key=lambda x: x[1].name)}
 
 
-def log_itinery(itin, json_file:Path):
+def add_itinery_to_tracker_file(itin, json_file:Path):
     tracker = FileTracker.from_json(json_file)
-    tracker.update_itin(itin)
+    tracker.add_update_itin(itin)
     tracker.save_json()
