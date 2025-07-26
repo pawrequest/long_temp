@@ -171,3 +171,4 @@ cython_debug/
 .pypirc
 /data/
 /longtemp/file_references.json
+/uv.lock

@@ -1,7 +1,7 @@
 import pytest
 
-from longtemp.main import main
-from longtemp.intinery_file import ItineriesFile
+# from longtemp.v1.main import main
+# from longtemp.intinery_file import ItineriesFile
 
 
 @pytest.fixture(scope="function")
@@ -21,7 +21,7 @@ def test_copy_files(setup_env):
     assert (target / "file1.txt").exists()
     assert (target / "file2.txt").exists()
     assert itinery_file.exists()
-    itin_file = ItineriesFile(itinery_file)
+    itin_file =  ItineriesFile(itinery_file)
     assert itin_file.get_target(target) is not None
 
 
