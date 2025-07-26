@@ -27,13 +27,10 @@ def unpack_archives(scr: Path, tgt: Path):
 
 
 
-def re_combine_archives(archives_dir: Path, tgt: Path):
-    if tgt.exists():
-        rmtree(tgt)
-        logger.info(f"Removed {tgt}", category="Setup")
-    mkdir(tgt)
+def re_combine_archives(archives_dir: Path, tgt_dir: Path):
+    tgt_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Redeploying archives", category="Setup")
-    unpack_archives(archives_dir, tgt)
+    unpack_archives(archives_dir, tgt_dir)
 
 
 @contextlib.contextmanager

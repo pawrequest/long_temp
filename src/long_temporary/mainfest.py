@@ -13,6 +13,12 @@ class Manifest(BaseModel):
     paths_relative: set[Path] = field(default_factory=set)
     last_edit: datetime = field(default_factory=datetime.now)
 
+    @classmethod
+    def tgt_sub_src(cls, src: Path, tgt: Path):
+        src_files = scan_folder_sub_paths(src)
+        tgt_files = scan_folder_sub_paths(tgt)
+        return cls(root=tgt, paths_relative=tgt_files - src_files)
+
     def paths_resolved(self):
         return {self.root / _ for _ in self.paths_relative}
 
@@ -30,7 +36,8 @@ class Manifest(BaseModel):
         return f"Manifest({self.root})"
 
     def __hash__(self):
-        return hash(self.paths_relative)
+        # return hash(self.paths_relative)
+        return hash(frozenset(self.paths_relative))
 
     def __eq__(self, other: Self):
         return self.paths_relative == other.paths_relative

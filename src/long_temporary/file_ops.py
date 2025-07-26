@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Literal
 
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 OpType = Literal["copy", "delete", "replace", "prune_empty_folders"]
 
@@ -22,6 +22,17 @@ class FileopResult(BaseModel):
     paths_failed: set[Path] = field(default_factory=set)
     paths_skipped: set[Path] = field(default_factory=set)
     created_at: datetime = field(default_factory=datetime.now)
+
+    @property
+    def losses(self):
+        return (
+            len(self.paths_processed)
+            - len(self.files_copied)
+            - len(self.folders_created)
+            - len(self.files_deleted)
+            - len(self.folders_deleted)
+            - len(self.paths_skipped)
+        )
 
 
 def copy_overwrite_shutil(
@@ -56,8 +67,8 @@ def remove_files(rel_paths: set, root: Path, result: FileopResult = None, ignore
         result.paths_processed.add(rel_path.resolve())
         try:
             dst_path = root.resolve() / rel_path
-            logger.debug(f"Removing file: {dst_path}", category="Removing")
             if dst_path.is_file():
+                logger.debug(f"Removing file: {dst_path}", category="Removing")
                 dst_path.unlink()
                 result.files_deleted.add(dst_path)  #
         except Exception as e:

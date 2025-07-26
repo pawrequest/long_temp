@@ -5,7 +5,7 @@ from pathlib import Path
 from loguru import logger
 from pydantic import BaseModel
 
-from longtemp.itinery import Itinery
+from long_temporary.itinery import Itinery
 
 type ItineryDict = dict[str, Itinery]  # {str[name]: Itinery}
 
@@ -13,6 +13,9 @@ type ItineryDict = dict[str, Itinery]  # {str[name]: Itinery}
 class FileTracker(BaseModel):
     itineries_json: Path
     itineries: ItineryDict = field(default_factory=dict)
+
+    def __str__(self):
+        return f"FileTracker({self.itineries})"
 
     def __getitem__(self, item):
         return self.itineries.get(item)
@@ -41,7 +44,7 @@ class FileTracker(BaseModel):
         with open(self.itineries_json, "w") as f:
             data = self.model_dump(mode="json")
             json.dump(data, f)
-            logger.info(f"OverWrote: {str(data)}", category="Logging")
+            logger.info(f"OverWrote: {self.itineries_json}", category="Logging")
 
     def update_itin(self, itin: Itinery):
         if self.itineries.get(itin.name):
@@ -52,3 +55,9 @@ class FileTracker(BaseModel):
             logger.debug(f"Added new Itinery {itin}")
             self.itineries[itin.name] = itin
         self.itineries = {k: v for k, v in sorted(self.itineries.items(), key=lambda x: x[1].name)}
+
+
+def log_itinery(itin, json_file:Path):
+    tracker = FileTracker.from_json(json_file)
+    tracker.update_itin(itin)
+    tracker.save_json()
