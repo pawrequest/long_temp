@@ -1,7 +1,3 @@
-Here is a revised `README.md` section with archive management via WinRAR and class descriptions for `Itinery`, `Manifest`, and `FileTracker`.
-
----
-
 # long_temp
 
 **long_temp** is a naive file manager for Python, designed to help you track, compare, and synchronize files and folders. It provides utilities for scanning directories, managing file manifests, logging file operations, and redeploying files from archives (including WinRAR support).
